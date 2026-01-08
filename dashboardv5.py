@@ -6,6 +6,7 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
 import pandas as pd
 import yfinance as yf
 from datetime import datetime, timedelta
@@ -18,10 +19,8 @@ import seaborn as sns
 # FRED API import
 from fredapi import Fred
 
-
-
 # Initialize FRED API (REPLACE WITH YOUR ACTUAL API KEY)
-#FRED_API_KEY = st.secrets["FRED_API_KEY"] if "FRED_API_KEY" in st.secrets else "abcdef1234567890abcdef1234567890"  # Get from: https://fred.stlouisfed.org/docs/api/api_key.html
+# FRED_API_KEY = st.secrets["FRED_API_KEY"] if "FRED_API_KEY" in st.secrets else "abcdef1234567890abcdef1234567890"  # Get from: https://fred.stlouisfed.org/docs/api/api_key.html
 FRED_API_KEY = "abcdef1234567890abcdef1234567890" 
 fred = Fred(api_key=FRED_API_KEY)
 
@@ -683,98 +682,98 @@ def render_my_dashboard():
         st.subheader("Central Bank Rates & Policies (Live FRED Data)")
         
         # Check if FRED API key is set
-       # if FRED_API_KEY == "abcdef1234567890abcdef1234567890":
-          #  st.error("⚠️ FRED API Key not configured!")
-           # st.info("Please get a free API key from: https://fred.stlouisfed.org/docs/api/api_key.html")
-           # st.info("Add it to your Streamlit secrets or replace the default API key in the code.")
-          #  st.warning("No data available - FRED API key required.")
-     #   else:
+        # if FRED_API_KEY == "abcdef1234567890abcdef1234567890":
+        #     st.error("⚠️ FRED API Key not configured!")
+        #     st.info("Please get a free API key from: https://fred.stlouisfed.org/docs/api/api_key.html")
+        #     st.info("Add it to your Streamlit secrets or replace the default API key in the code.")
+        #     st.warning("No data available - FRED API key required.")
+        # else:
             # Fetch live central bank data from FRED
         try:
-                central_banks = get_central_bank_data()
+            central_banks = get_central_bank_data()
+            
+            if not central_banks:
+                st.warning("No central bank data available from FRED API.")
+            else:
+                # Display table (without FRED Series column for cleaner view)
+                display_df = pd.DataFrame(central_banks)
+                # Remove the technical 'FRED Series' column from display
+                if 'FRED Series' in display_df.columns:
+                    display_df = display_df[['Bank', 'Current Rate', 'Last Change']]
                 
-                if not central_banks:
-                    st.warning("No central bank data available from FRED API.")
-                else:
-                    # Display table (without FRED Series column for cleaner view)
-                    display_df = pd.DataFrame(central_banks)
-                    # Remove the technical 'FRED Series' column from display
-                    if 'FRED Series' in display_df.columns:
-                        display_df = display_df[['Bank', 'Current Rate', 'Last Change']]
-                    
-                    st.dataframe(display_df, use_container_width=True, hide_index=True)
-                    
-                    # Add download button for central bank data
-                    st.markdown("---")
-                    if st.button("📥 Download Central Bank Data", use_container_width=True, key="dl_central_bank"):
-                        download_df = pd.DataFrame(central_banks)
-                        csv = download_df.to_csv(index=False)
-                        st.download_button(
-                            label="Confirm Download",
-                            data=csv,
-                            file_name=f"central_bank_rates_{datetime.now().date()}.csv",
-                            mime="text/csv",
-                            use_container_width=True,
-                            key="confirm_dl_central_bank"
-                        )
-                             
-            except Exception as e:
-                st.error(f"Error fetching FRED data: {str(e)}")
-                st.info("Please check your FRED API key and internet connection.")
+                st.dataframe(display_df, use_container_width=True, hide_index=True)
+                
+                # Add download button for central bank data
+                st.markdown("---")
+                if st.button("📥 Download Central Bank Data", use_container_width=True, key="dl_central_bank"):
+                    download_df = pd.DataFrame(central_banks)
+                    csv = download_df.to_csv(index=False)
+                    st.download_button(
+                        label="Confirm Download",
+                        data=csv,
+                        file_name=f"central_bank_rates_{datetime.now().date()}.csv",
+                        mime="text/csv",
+                        use_container_width=True,
+                        key="confirm_dl_central_bank"
+                    )
+                        
+        except Exception as e:
+            st.error(f"Error fetching FRED data: {str(e)}")
+            st.info("Please check your FRED API key and internet connection.")
                 
     with tab3:
         st.subheader("Economic Indicators (Live FRED Data)")
         
         # Check if FRED API key is set
-        #if FRED_API_KEY == "abcdef1234567890abcdef1234567890":
-        #    st.error("⚠️ FRED API Key not configured!")
-        #    st.info("Please get a free API key from: https://fred.stlouisfed.org/docs/api/api_key.html")
-        #    st.info("Add it to your Streamlit secrets or replace the default API key in the code.")
-        #    st.warning("No data available - FRED API key required.")
-                else:
-            try:
-                # Fetch economic indicators data
-                economic_data = get_economic_indicators_data()
+        # if FRED_API_KEY == "abcdef1234567890abcdef1234567890":
+        #     st.error("⚠️ FRED API Key not configured!")
+        #     st.info("Please get a free API key from: https://fred.stlouisfed.org/docs/api/api_key.html")
+        #     st.info("Add it to your Streamlit secrets or replace the default API key in the code.")
+        #     st.warning("No data available - FRED API key required.")
+        # else:
+        try:
+            # Fetch economic indicators data
+            economic_data = get_economic_indicators_data()
+            
+            if not economic_data:
+                st.warning("No economic data available from FRED API.")
+            else:
+                # Create a clean display dataframe
+                display_data = []
+                for country_data in economic_data:
+                    display_row = {
+                        "Country": country_data["Country"],
+                        "GDP": country_data.get("GDP", "N/A"),
+                        "GDP Date": country_data.get("GDP_date", "N/A"),
+                        "CPI": country_data.get("CPI", "N/A"),
+                        "CPI Date": country_data.get("CPI_date", "N/A"),
+                        "Core CPI": country_data.get("Core CPI", "N/A"),
+                        "Core CPI Date": country_data.get("Core CPI_date", "N/A"),
+                        "Unemployment": country_data.get("Unemployment", "N/A"),
+                        "Unemployment Date": country_data.get("Unemployment_date", "N/A")
+                    }
+                    display_data.append(display_row)
                 
-                if not economic_data:
-                    st.warning("No economic data available from FRED API.")
-                else:
-                    # Create a clean display dataframe
-                    display_data = []
-                    for country_data in economic_data:
-                        display_row = {
-                            "Country": country_data["Country"],
-                            "GDP": country_data.get("GDP", "N/A"),
-                            "GDP Date": country_data.get("GDP_date", "N/A"),
-                            "CPI": country_data.get("CPI", "N/A"),
-                            "CPI Date": country_data.get("CPI_date", "N/A"),
-                            "Core CPI": country_data.get("Core CPI", "N/A"),
-                            "Core CPI Date": country_data.get("Core CPI_date", "N/A"),
-                            "Unemployment": country_data.get("Unemployment", "N/A"),
-                            "Unemployment Date": country_data.get("Unemployment_date", "N/A")
-                        }
-                        display_data.append(display_row)
-                    
-                    display_df = pd.DataFrame(display_data)
-                    st.dataframe(display_df, use_container_width=True, hide_index=True)
-                    
-                    # Add download button
-                    st.markdown("---")
-                    if st.button("📥 Download Economic Data", use_container_width=True, key="dl_economic"):
-                        download_df = pd.DataFrame(display_data)
-                        csv = download_df.to_csv(index=False)
-                        st.download_button(
-                            label="Confirm Download",
-                            data=csv,
-                            file_name=f"economic_indicators_{datetime.now().date()}.csv",
-                            mime="text/csv",
-                            use_container_width=True,
-                            key="confirm_dl_economic"
-                        )
+                display_df = pd.DataFrame(display_data)
+                st.dataframe(display_df, use_container_width=True, hide_index=True)
+                
+                # Add download button
+                st.markdown("---")
+                if st.button("📥 Download Economic Data", use_container_width=True, key="dl_economic"):
+                    download_df = pd.DataFrame(display_data)
+                    csv = download_df.to_csv(index=False)
+                    st.download_button(
+                        label="Confirm Download",
+                        data=csv,
+                        file_name=f"economic_indicators_{datetime.now().date()}.csv",
+                        mime="text/csv",
+                        use_container_width=True,
+                        key="confirm_dl_economic"
+                    )
                         
-            except Exception as e:
-                st.error(f"Error fetching economic data: {str(e)}")
-                st.info("Please check your FRED API key and internet connection.")
+        except Exception as e:
+            st.error(f"Error fetching economic data: {str(e)}")
+            st.info("Please check your FRED API key and internet connection.")
 
 # ====================== PAGE 2: EQUITY ======================
 def render_equity_page():
@@ -2063,8 +2062,6 @@ elif st.session_state.page == "Rates/Bonds":
     render_rates_bonds_page()
 elif st.session_state.page == "Commodities":
     render_commodities_page()
-
-
 
 
 
