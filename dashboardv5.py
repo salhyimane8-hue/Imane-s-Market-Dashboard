@@ -690,7 +690,7 @@ def render_my_dashboard():
           #  st.warning("No data available - FRED API key required.")
      #   else:
             # Fetch live central bank data from FRED
-            try:
+        try:
                 central_banks = get_central_bank_data()
                 
                 if not central_banks:
@@ -2063,6 +2063,7 @@ elif st.session_state.page == "Rates/Bonds":
     render_rates_bonds_page()
 elif st.session_state.page == "Commodities":
     render_commodities_page()
+
 
 
 
