@@ -21,7 +21,7 @@ from fredapi import Fred
 
 
 # Initialize FRED API (REPLACE WITH YOUR ACTUAL API KEY)
-FRED_API_KEY = st.secrets("FRED_API_KEY", "abcdef1234567890abcdef1234567890")  # Get from: https://fred.stlouisfed.org/docs/api/api_key.html
+FRED_API_KEY = st.secrets["FRED_API_KEY"] if "FRED_API_KEY" in st.secrets else "abcdef1234567890abcdef1234567890"  # Get from: https://fred.stlouisfed.org/docs/api/api_key.html
 fred = Fred(api_key=FRED_API_KEY)
 
 # ====================== FRED Central Bank Data ======================
@@ -34,20 +34,43 @@ CENTRAL_BANK_SERIES = {
     "Swiss National Bank (SNB)": "ECBMLFR",  # ECB Marginal Lending Facility Rate (proxy)
 }
 
+# FRED Economic Indicators Series
+ECONOMIC_INDICATORS = {
+    "United States": {
+        "GDP": "GDP",
+        "Core CPI": "CORESTICKM159SFRBATL",
+        "CPI": "FPCPITOTLZGUSA",
+        "Unemployment": "UNRATE"
+    },
+    "Eurozone": {
+        "GDP": "CLVMEURSCAB1GQEA19",
+        "Core CPI": None,
+        "CPI": None,
+        "Unemployment": None
+    }
+}
+
 @st.cache_data(ttl=3600)  # Cache for 1 hour
-def get_fred_data(series_id, start_date, end_date):
+def get_fred_data(series_id, start_date=None, end_date=None):
     """Fetch data from FRED API"""
     try:
+        if not series_id:
+            return None
+            
         # Convert date strings if needed
-        if isinstance(start_date, datetime.date):
+        if start_date and isinstance(start_date, datetime.date):
             start_date = start_date.strftime("%Y-%m-%d")
-        if isinstance(end_date, datetime.date):
+        if end_date and isinstance(end_date, datetime.date):
             end_date = end_date.strftime("%Y-%m-%d")
         
         # Fetch data from FRED
-        data = fred.get_series(series_id, start_date, end_date)
+        if start_date and end_date:
+            data = fred.get_series(series_id, start_date, end_date)
+        else:
+            # Get most recent 5 years of data by default
+            data = fred.get_series(series_id, observation_start='2019-01-01')
         
-        if not data.empty:
+        if data is not None and not data.empty:
             # Convert to Series if needed
             if isinstance(data, pd.DataFrame):
                 data = data.iloc[:, 0]
@@ -63,8 +86,8 @@ def get_central_bank_data():
     for bank_name, series_id in CENTRAL_BANK_SERIES.items():
         try:
             # Get latest rate
-            latest_data = fred.get_series(series_id, observation_start='2023-01-01')
-            if not latest_data.empty:
+            latest_data = get_fred_data(series_id)
+            if latest_data is not None and not latest_data.empty:
                 current_rate = latest_data.iloc[-1]
                 
                 # Get previous rate for change calculation
@@ -75,27 +98,74 @@ def get_central_bank_data():
                 else:
                     last_change = "N/A"
                 
+                # Format as percentage
+                formatted_rate = f"{current_rate:.2f}%" if pd.notna(current_rate) else "N/A"
                 
                 central_bank_data.append({
                     "Bank": bank_name,
-                    "Current Rate": f"{current_rate:.2f}%" if current_rate else "N/A",
+                    "Current Rate": formatted_rate,
+                    "Last Change": last_change,
                     "FRED Series": series_id    # For charting
                 })
             else:
                 central_bank_data.append({
                     "Bank": bank_name,
                     "Current Rate": "N/A",
+                    "Last Change": "N/A",
                     "FRED Series": series_id
                 })
                 
         except Exception as e:
             central_bank_data.append({
                 "Bank": bank_name,
-                "Current Rate": f"Error: {str(e)}",
+                "Current Rate": f"Error: {str(e)[:50]}...",
+                "Last Change": "N/A",
                 "FRED Series": series_id
             })
     
     return central_bank_data
+
+def get_economic_indicators_data():
+    """Fetch economic indicators data from FRED"""
+    economic_data = []
+    
+    for country, indicators in ECONOMIC_INDICATORS.items():
+        country_data = {"Country": country}
+        
+        for indicator_name, series_id in indicators.items():
+            if series_id:
+                try:
+                    # Get latest data point
+                    data = get_fred_data(series_id)
+                    if data is not None and not data.empty:
+                        latest_value = data.iloc[-1]
+                        latest_date = data.index[-1]
+                        
+                        # Format based on indicator type
+                        if indicator_name == "GDP":
+                            formatted_value = f"{latest_value:,.2f} B"  # Billions
+                        elif indicator_name in ["CPI", "Core CPI"]:
+                            formatted_value = f"{latest_value:.2f}%"
+                        elif indicator_name == "Unemployment":
+                            formatted_value = f"{latest_value:.1f}%"
+                        else:
+                            formatted_value = f"{latest_value:.2f}"
+                        
+                        country_data[indicator_name] = formatted_value
+                        country_data[f"{indicator_name}_date"] = latest_date.strftime("%Y-%m-%d")
+                    else:
+                        country_data[indicator_name] = "N/A"
+                        country_data[f"{indicator_name}_date"] = "N/A"
+                except Exception as e:
+                    country_data[indicator_name] = "Error"
+                    country_data[f"{indicator_name}_date"] = "N/A"
+            else:
+                country_data[indicator_name] = "N/A"
+                country_data[f"{indicator_name}_date"] = "N/A"
+        
+        economic_data.append(country_data)
+    
+    return economic_data
 
 # ====================== SESSION STATE INITIALIZATION ======================
 if "page" not in st.session_state:
@@ -527,144 +597,183 @@ def render_my_dashboard():
     tab1, tab2, tab3 = st.tabs(["📈 Market Overview", "🏛️ Central Banks", "📊 Economic Data"])
 
     with tab1:
-     col1, col2 = st.columns(2)
+        col1, col2 = st.columns(2)
 
-    with col1:
-        st.subheader("Equity Markets")
-        major_indices = {
-            "S&P 500": "^GSPC",
-            "NASDAQ": "^IXIC",
-            "Dow Jones": "^DJI",
-            "Euro Stoxx 50": "^STOXX50E",
-            "DAX": "^GDAXI",
-            "FTSE 100": "^FTSE",
-            "Nikkei 225": "^N225",
-            "Hang Seng": "^HSI"
-        }
+        with col1:
+            st.subheader("Equity Markets")
+            major_indices = {
+                "S&P 500": "^GSPC",
+                "NASDAQ": "^IXIC",
+                "Dow Jones": "^DJI",
+                "Euro Stoxx 50": "^STOXX50E",
+                "DAX": "^GDAXI",
+                "FTSE 100": "^FTSE",
+                "Nikkei 225": "^N225",
+                "Hang Seng": "^HSI"
+            }
 
-        equity_data = []
-        for name, ticker in major_indices.items():
+            equity_data = []
+            for name, ticker in major_indices.items():
+                result = get_equity_data(ticker, selected_start, selected_end, ytd_start_date)
+                if result:
+                    equity_data.append({"Index": name, "Value": result["Value"], "1D %": result["Daily %"], "YTD %": result["YTD %"]})
+
+            if equity_data:
+                df_equity = pd.DataFrame(equity_data)
+                df_display = df_equity.copy()
+                df_display["Value"] = df_display["Value"].apply(lambda x: format_value(x, decimals))
+                df_display["1D %"] = df_display["1D %"].apply(format_percentage)
+                df_display["YTD %"] = df_display["YTD %"].apply(format_percentage)
+
+                styled = df_display.style.map(color_percentage, subset=["1D %", "YTD %"])
+                st.dataframe(styled, use_container_width=True, hide_index=True)
+
+        with col2:
+            st.subheader("FX Markets")
+            fx_pairs = {
+                "EUR/USD": "EURUSD=X",
+                "GBP/USD": "GBPUSD=X",
+                "USD/JPY": "JPY=X",
+                "USD/CHF": "CHF=X",
+                "AUD/USD": "AUDUSD=X",
+                "USD/CAD": "CAD=X"
+            }
+
+            fx_data = []
+            for pair, ticker in fx_pairs.items():
+                result = get_equity_data(ticker, selected_start, selected_end, ytd_start_date)
+                if result:
+                    fx_data.append({"Pair": pair, "Rate": result["Value"], "1D %": result["Daily %"], "YTD %": result["YTD %"]})
+
+            if fx_data:
+                df_fx = pd.DataFrame(fx_data)
+                df_display = df_fx.copy()
+                df_display["Rate"] = df_display["Rate"].apply(lambda x: format_value(x, decimals))
+                df_display["1D %"] = df_display["1D %"].apply(format_percentage)
+                df_display["YTD %"] = df_display["YTD %"].apply(format_percentage)
+
+                styled = df_display.style.map(color_percentage, subset=["1D %", "YTD %"])
+                st.dataframe(styled, use_container_width=True, hide_index=True)
+
+        # ====== KEY INDICATORS SECTION (ONLY IN MARKET OVERVIEW) ======
+        st.markdown("---")
+        st.subheader("Key Indicators")
+        
+        indicators = {"VIX": "^VIX", "DXY": "DX-Y.NYB", "Gold": "GC=F", "Oil (WTI)": "CL=F"}
+        
+        ind_data = []
+        for name, ticker in indicators.items():
             result = get_equity_data(ticker, selected_start, selected_end, ytd_start_date)
             if result:
-                equity_data.append({"Index": name, "Value": result["Value"], "1D %": result["Daily %"], "YTD %": result["YTD %"]})
-
-        if equity_data:
-            df_equity = pd.DataFrame(equity_data)
-            df_display = df_equity.copy()
+                ind_data.append({"Indicator": name, "Value": result["Value"], "1D %": result["Daily %"], "YTD %": result["YTD %"]})
+        
+        if ind_data:
+            df_ind = pd.DataFrame(ind_data)
+            df_display = df_ind.copy()
             df_display["Value"] = df_display["Value"].apply(lambda x: format_value(x, decimals))
             df_display["1D %"] = df_display["1D %"].apply(format_percentage)
             df_display["YTD %"] = df_display["YTD %"].apply(format_percentage)
-
+            
+            # Afficher dans une seule dataframe en pleine largeur
             styled = df_display.style.map(color_percentage, subset=["1D %", "YTD %"])
             st.dataframe(styled, use_container_width=True, hide_index=True)
-
-    with col2:
-        st.subheader("FX Markets")
-        fx_pairs = {
-            "EUR/USD": "EURUSD=X",
-            "GBP/USD": "GBPUSD=X",
-            "USD/JPY": "JPY=X",
-            "USD/CHF": "CHF=X",
-            "AUD/USD": "AUDUSD=X",
-            "USD/CAD": "CAD=X"
-        }
-
-        fx_data = []
-        for pair, ticker in fx_pairs.items():
-            result = get_equity_data(ticker, selected_start, selected_end, ytd_start_date)
-            if result:
-                fx_data.append({"Pair": pair, "Rate": result["Value"], "1D %": result["Daily %"], "YTD %": result["YTD %"]})
-
-        if fx_data:
-            df_fx = pd.DataFrame(fx_data)
-            df_display = df_fx.copy()
-            df_display["Rate"] = df_display["Rate"].apply(lambda x: format_value(x, decimals))
-            df_display["1D %"] = df_display["1D %"].apply(format_percentage)
-            df_display["YTD %"] = df_display["YTD %"].apply(format_percentage)
-
-            styled = df_display.style.map(color_percentage, subset=["1D %", "YTD %"])
-            st.dataframe(styled, use_container_width=True, hide_index=True)
-
-    # ====== KEY INDICATORS EN PLEINE LARGEUR (APRÈS LES DEUX COLONNES) ======
-    st.markdown("---")
-    st.subheader("Key Indicators")
-    
-    indicators = {"VIX": "^VIX", "DXY": "DX-Y.NYB", "Gold": "GC=F", "Oil (WTI)": "CL=F"}
-    
-    # Créer 2 colonnes pour les indicateurs
-    ind_col1, ind_col2 = st.columns(2)
-    
-    ind_data = []
-    for name, ticker in indicators.items():
-        result = get_equity_data(ticker, selected_start, selected_end, ytd_start_date)
-        if result:
-            ind_data.append({"Indicator": name, "Value": result["Value"], "1D %": result["Daily %"], "YTD %": result["YTD %"]})
-    
-    if ind_data:
-        df_ind = pd.DataFrame(ind_data)
-        df_display = df_ind.copy()
-        df_display["Value"] = df_display["Value"].apply(lambda x: format_value(x, decimals))
-        df_display["1D %"] = df_display["1D %"].apply(format_percentage)
-        df_display["YTD %"] = df_display["YTD %"].apply(format_percentage)
-        
-        # Afficher dans une seule dataframe en pleine largeur
-        styled = df_display.style.map(color_percentage, subset=["1D %", "YTD %"])
-        st.dataframe(styled, use_container_width=True, hide_index=True)
-
 
     with tab2:
-     st.subheader("Central Bank Rates & Policies (Live FRED Data)")
-    
-    # Check if FRED API key is set
-    if FRED_API_KEY == "your_fred_api_key_here":
-        st.error("⚠️ FRED API Key not configured!")
-        st.info("Please get a free API key from: https://fred.stlouisfed.org/docs/api/api_key.html")
-        st.info("Then replace 'your_fred_api_key_here' with your actual API key in line 15 of the code.")
-        st.warning("No data available - FRED API key required.")
-    else:
-        # Fetch live central bank data from FRED
-        try:
-            central_banks = get_central_bank_data()
-            
-            if not central_banks:
-                st.warning("No central bank data available from FRED API.")
-                return
-            
-            # Display table (without FRED Series column for cleaner view)
-            display_df = pd.DataFrame(central_banks)
-            # Remove the technical 'FRED Series' column from display
-            if 'FRED Series' in display_df.columns:
-                display_df = display_df.drop(columns=['FRED Series'])
-            
-            st.dataframe(display_df, use_container_width=True, hide_index=True)
-            
-            # Add download button for central bank data
-            st.markdown("---")
-            if st.button("📥 Download Central Bank Data", use_container_width=True):
-                download_df = pd.DataFrame(central_banks)
-                csv = download_df.to_csv(index=False)
-                st.download_button(
-                    label="Confirm Download",
-                    data=csv,
-                    file_name=f"central_bank_rates_{datetime.now().date()}.csv",
-                    mime="text/csv",
-                    use_container_width=True
-                )
-                     
-        except Exception as e:
-            st.error(f"Error fetching FRED data: {str(e)}")
-            st.info("Please check your FRED API key and internet connection.")
-            
+        st.subheader("Central Bank Rates & Policies (Live FRED Data)")
+        
+        # Check if FRED API key is set
+        if FRED_API_KEY == "abcdef1234567890abcdef1234567890":
+            st.error("⚠️ FRED API Key not configured!")
+            st.info("Please get a free API key from: https://fred.stlouisfed.org/docs/api/api_key.html")
+            st.info("Add it to your Streamlit secrets or replace the default API key in the code.")
+            st.warning("No data available - FRED API key required.")
+        else:
+            # Fetch live central bank data from FRED
+            try:
+                central_banks = get_central_bank_data()
+                
+                if not central_banks:
+                    st.warning("No central bank data available from FRED API.")
+                else:
+                    # Display table (without FRED Series column for cleaner view)
+                    display_df = pd.DataFrame(central_banks)
+                    # Remove the technical 'FRED Series' column from display
+                    if 'FRED Series' in display_df.columns:
+                        display_df = display_df[['Bank', 'Current Rate', 'Last Change']]
+                    
+                    st.dataframe(display_df, use_container_width=True, hide_index=True)
+                    
+                    # Add download button for central bank data
+                    st.markdown("---")
+                    if st.button("📥 Download Central Bank Data", use_container_width=True, key="dl_central_bank"):
+                        download_df = pd.DataFrame(central_banks)
+                        csv = download_df.to_csv(index=False)
+                        st.download_button(
+                            label="Confirm Download",
+                            data=csv,
+                            file_name=f"central_bank_rates_{datetime.now().date()}.csv",
+                            mime="text/csv",
+                            use_container_width=True,
+                            key="confirm_dl_central_bank"
+                        )
+                             
+            except Exception as e:
+                st.error(f"Error fetching FRED data: {str(e)}")
+                st.info("Please check your FRED API key and internet connection.")
+                
     with tab3:
-        st.subheader("Economic Indicators")
-        economic_data = [
-            {"Country": "United States", "GDP QoQ": "4.9%", "Inflation": "3.2%", "Core Inflation": "4.0%", "Unemployment": "3.9%", "PMI": "50.0", "Last Update": "Nov 2023"},
-            {"Country": "Eurozone", "GDP QoQ": "0.1%", "Inflation": "2.9%", "Core Inflation": "4.2%", "Unemployment": "6.5%", "PMI": "43.1", "Last Update": "Nov 2023"},
-            {"Country": "United Kingdom", "GDP QoQ": "0.0%", "Inflation": "4.6%", "Core Inflation": "5.7%", "Unemployment": "4.2%", "PMI": "44.8", "Last Update": "Nov 2023"},
-            {"Country": "Japan", "GDP QoQ": "-0.5%", "Inflation": "3.3%", "Core Inflation": "2.9%", "Unemployment": "2.6%", "PMI": "48.1", "Last Update": "Nov 2023"},
-            {"Country": "China", "GDP QoQ": "1.3%", "Inflation": "-0.2%", "Core Inflation": "0.6%", "Unemployment": "5.0%", "PMI": "49.4", "Last Update": "Nov 2023"},
-        ]
-        st.dataframe(pd.DataFrame(economic_data), use_container_width=True, hide_index=True)
+        st.subheader("Economic Indicators (Live FRED Data)")
+        
+        # Check if FRED API key is set
+        if FRED_API_KEY == "abcdef1234567890abcdef1234567890":
+            st.error("⚠️ FRED API Key not configured!")
+            st.info("Please get a free API key from: https://fred.stlouisfed.org/docs/api/api_key.html")
+            st.info("Add it to your Streamlit secrets or replace the default API key in the code.")
+            st.warning("No data available - FRED API key required.")
+        else:
+            try:
+                # Fetch economic indicators data
+                economic_data = get_economic_indicators_data()
+                
+                if not economic_data:
+                    st.warning("No economic data available from FRED API.")
+                else:
+                    # Create a clean display dataframe
+                    display_data = []
+                    for country_data in economic_data:
+                        display_row = {
+                            "Country": country_data["Country"],
+                            "GDP": country_data.get("GDP", "N/A"),
+                            "GDP Date": country_data.get("GDP_date", "N/A"),
+                            "CPI": country_data.get("CPI", "N/A"),
+                            "CPI Date": country_data.get("CPI_date", "N/A"),
+                            "Core CPI": country_data.get("Core CPI", "N/A"),
+                            "Core CPI Date": country_data.get("Core CPI_date", "N/A"),
+                            "Unemployment": country_data.get("Unemployment", "N/A"),
+                            "Unemployment Date": country_data.get("Unemployment_date", "N/A")
+                        }
+                        display_data.append(display_row)
+                    
+                    display_df = pd.DataFrame(display_data)
+                    st.dataframe(display_df, use_container_width=True, hide_index=True)
+                    
+                    # Add download button
+                    st.markdown("---")
+                    if st.button("📥 Download Economic Data", use_container_width=True, key="dl_economic"):
+                        download_df = pd.DataFrame(display_data)
+                        csv = download_df.to_csv(index=False)
+                        st.download_button(
+                            label="Confirm Download",
+                            data=csv,
+                            file_name=f"economic_indicators_{datetime.now().date()}.csv",
+                            mime="text/csv",
+                            use_container_width=True,
+                            key="confirm_dl_economic"
+                        )
+                        
+            except Exception as e:
+                st.error(f"Error fetching economic data: {str(e)}")
+                st.info("Please check your FRED API key and internet connection.")
 
 # ====================== PAGE 2: EQUITY ======================
 def render_equity_page():
@@ -1952,7 +2061,5 @@ elif st.session_state.page == "FX":
 elif st.session_state.page == "Rates/Bonds":
     render_rates_bonds_page()
 elif st.session_state.page == "Commodities":
-
     render_commodities_page()
-
 
