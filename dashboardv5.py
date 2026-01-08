@@ -690,7 +690,7 @@ def render_my_dashboard():
           #  st.warning("No data available - FRED API key required.")
      #   else:
             # Fetch live central bank data from FRED
-          try:
+        try:
                 central_banks = get_central_bank_data()
                 
                 if not central_banks:
@@ -731,7 +731,7 @@ def render_my_dashboard():
         #    st.info("Please get a free API key from: https://fred.stlouisfed.org/docs/api/api_key.html")
         #    st.info("Add it to your Streamlit secrets or replace the default API key in the code.")
         #    st.warning("No data available - FRED API key required.")
-        else:
+                else:
             try:
                 # Fetch economic indicators data
                 economic_data = get_economic_indicators_data()
@@ -2063,6 +2063,7 @@ elif st.session_state.page == "Rates/Bonds":
     render_rates_bonds_page()
 elif st.session_state.page == "Commodities":
     render_commodities_page()
+
 
 
 
