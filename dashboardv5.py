@@ -21,7 +21,7 @@ from fredapi import Fred
 
 
 # Initialize FRED API (REPLACE WITH YOUR ACTUAL API KEY)
-FRED_API_KEY = st.secrets.get("FRED_API_KEY", "your_fred_api_key_here")  # Get from: https://fred.stlouisfed.org/docs/api/api_key.html
+FRED_API_KEY = st.secrets("FRED_API_KEY", "abcdef1234567890abcdef1234567890")  # Get from: https://fred.stlouisfed.org/docs/api/api_key.html
 fred = Fred(api_key=FRED_API_KEY)
 
 # ====================== FRED Central Bank Data ======================
@@ -1954,4 +1954,5 @@ elif st.session_state.page == "Rates/Bonds":
 elif st.session_state.page == "Commodities":
 
     render_commodities_page()
+
 
