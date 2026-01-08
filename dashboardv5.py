@@ -683,12 +683,12 @@ def render_my_dashboard():
         st.subheader("Central Bank Rates & Policies (Live FRED Data)")
         
         # Check if FRED API key is set
-        if FRED_API_KEY == "abcdef1234567890abcdef1234567890":
-            st.error("⚠️ FRED API Key not configured!")
-            st.info("Please get a free API key from: https://fred.stlouisfed.org/docs/api/api_key.html")
-            st.info("Add it to your Streamlit secrets or replace the default API key in the code.")
-            st.warning("No data available - FRED API key required.")
-        else:
+       # if FRED_API_KEY == "abcdef1234567890abcdef1234567890":
+          #  st.error("⚠️ FRED API Key not configured!")
+           # st.info("Please get a free API key from: https://fred.stlouisfed.org/docs/api/api_key.html")
+           # st.info("Add it to your Streamlit secrets or replace the default API key in the code.")
+          #  st.warning("No data available - FRED API key required.")
+     #   else:
             # Fetch live central bank data from FRED
             try:
                 central_banks = get_central_bank_data()
@@ -726,11 +726,11 @@ def render_my_dashboard():
         st.subheader("Economic Indicators (Live FRED Data)")
         
         # Check if FRED API key is set
-        if FRED_API_KEY == "abcdef1234567890abcdef1234567890":
-            st.error("⚠️ FRED API Key not configured!")
-            st.info("Please get a free API key from: https://fred.stlouisfed.org/docs/api/api_key.html")
-            st.info("Add it to your Streamlit secrets or replace the default API key in the code.")
-            st.warning("No data available - FRED API key required.")
+        #if FRED_API_KEY == "abcdef1234567890abcdef1234567890":
+        #    st.error("⚠️ FRED API Key not configured!")
+        #    st.info("Please get a free API key from: https://fred.stlouisfed.org/docs/api/api_key.html")
+        #    st.info("Add it to your Streamlit secrets or replace the default API key in the code.")
+        #    st.warning("No data available - FRED API key required.")
         else:
             try:
                 # Fetch economic indicators data
@@ -2063,5 +2063,6 @@ elif st.session_state.page == "Rates/Bonds":
     render_rates_bonds_page()
 elif st.session_state.page == "Commodities":
     render_commodities_page()
+
 
 
