@@ -20,8 +20,8 @@ import seaborn as sns
 from fredapi import Fred
 
 # Initialize FRED API (REPLACE WITH YOUR ACTUAL API KEY)
-# FRED_API_KEY = st.secrets["FRED_API_KEY"] if "FRED_API_KEY" in st.secrets else "abcdef1234567890abcdef1234567890"  # Get from: https://fred.stlouisfed.org/docs/api/api_key.html
-FRED_API_KEY = "abcdef1234567890abcdef1234567890" 
+# FRED_API_KEY = st.secrets["FRED_API_KEY"] if "FRED_API_KEY" in st.secrets else "e3fd93e7173866939be4490dae12c001"  # Get from: https://fred.stlouisfed.org/docs/api/api_key.html
+FRED_API_KEY = "e3fd93e7173866939be4490dae12c001" 
 fred = Fred(api_key=FRED_API_KEY)
 
 # ====================== FRED Central Bank Data ======================
@@ -682,7 +682,7 @@ def render_my_dashboard():
         st.subheader("Central Bank Rates & Policies (Live FRED Data)")
         
         # Check if FRED API key is set
-        # if FRED_API_KEY == "abcdef1234567890abcdef1234567890":
+        # if FRED_API_KEY == "e3fd93e7173866939be4490dae12c001":
         #     st.error("⚠️ FRED API Key not configured!")
         #     st.info("Please get a free API key from: https://fred.stlouisfed.org/docs/api/api_key.html")
         #     st.info("Add it to your Streamlit secrets or replace the default API key in the code.")
@@ -725,7 +725,7 @@ def render_my_dashboard():
         st.subheader("Economic Indicators (Live FRED Data)")
         
         # Check if FRED API key is set
-        # if FRED_API_KEY == "abcdef1234567890abcdef1234567890":
+        # if FRED_API_KEY == "e3fd93e7173866939be4490dae12c001":
         #     st.error("⚠️ FRED API Key not configured!")
         #     st.info("Please get a free API key from: https://fred.stlouisfed.org/docs/api/api_key.html")
         #     st.info("Add it to your Streamlit secrets or replace the default API key in the code.")
@@ -2062,6 +2062,7 @@ elif st.session_state.page == "Rates/Bonds":
     render_rates_bonds_page()
 elif st.session_state.page == "Commodities":
     render_commodities_page()
+
 
 
 
