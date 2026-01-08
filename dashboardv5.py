@@ -1,4 +1,11 @@
 import streamlit as st
+
+# Page config
+st.set_page_config(
+    page_title="Financial Dashboard",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 import pandas as pd
 import yfinance as yf
 from datetime import datetime, timedelta
@@ -11,12 +18,7 @@ import seaborn as sns
 # FRED API import
 from fredapi import Fred
 
-# Page config
-st.set_page_config(
-    page_title="Financial Dashboard",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+
 
 # Initialize FRED API (REPLACE WITH YOUR ACTUAL API KEY)
 FRED_API_KEY = "e3fd93e7173866939be4490dae12c001"  # Get from: https://fred.stlouisfed.org/docs/api/api_key.html
@@ -1950,4 +1952,5 @@ elif st.session_state.page == "FX":
 elif st.session_state.page == "Rates/Bonds":
     render_rates_bonds_page()
 elif st.session_state.page == "Commodities":
+
     render_commodities_page()
