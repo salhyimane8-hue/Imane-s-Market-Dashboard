@@ -2,7 +2,7 @@ import streamlit as st
 
 # Page config
 st.set_page_config(
-    page_title="Financial Dashboard",
+    page_title="Market Dashboard",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -543,7 +543,7 @@ def initialize_selections():
 with st.sidebar:
     st.title("🌐 Financial Dashboard")
 
-    st.markdown("### 📊 Navigation")
+    st.markdown("### Navigation")
     page_options = ["My Dashboard", "Equity", "FX", "Rates/Bonds", "Commodities"]
     selected_page = st.selectbox("Select Page", page_options, key="page_select", label_visibility="collapsed")
 
@@ -552,7 +552,7 @@ with st.sidebar:
         st.rerun()
 
     st.markdown("---")
-    st.header("📅 Global Date Range")
+    st.header("Global Date Range")
 
     selected_start = st.date_input("Start Date", value=st.session_state.selected_start)
     selected_end = st.date_input("End Date", value=st.session_state.selected_end)
@@ -579,8 +579,8 @@ with st.sidebar:
 
 # ====================== PAGE 1: MY DASHBOARD ======================
 def render_my_dashboard():
-    st.title("📊 My Dashboard")
-    st.markdown("### Personal Overview of Key Financial Metrics")
+    st.title("My Dashboard")
+    st.markdown("### Overview of Key Financial Metrics")
 
     initialize_selections()
 
@@ -824,7 +824,7 @@ def render_equity_page():
                 st.rerun()
 
         st.markdown("---")
-        st.header("🏢 Individual Equities Filters")
+        st.header("Individual Equities Filters")
 
         if st.button("✅ Select All Equities from Indices", use_container_width=True, key="select_all_eq_btn"):
             st.session_state.selected_equity_tickers = {}
@@ -873,7 +873,7 @@ def render_equity_page():
                 st.rerun()
 
         st.markdown("---")
-        st.header("📈 Chart Configuration")
+        st.header("Chart Configuration")
 
         st.subheader("Chart Date Range")
         chart_col1, chart_col2 = st.columns(2)
@@ -942,14 +942,14 @@ def render_equity_page():
                 st.session_state.chart_items = []
                 st.rerun()
 
-    tab1, tab2, tab3 = st.tabs(["📊 Market Indices", "🏢 Individual Equities", "📈 Interactive Charts"])
+    tab1, tab2, tab3 = st.tabs(["Market Indices", "Individual Equities", "Interactive Charts"])
 
     with tab1:
         st.header("Market Indices")
         col1, col2 = st.columns([3, 1])
         with col1:
             st.subheader(f"Date Range: {selected_start} to {selected_end}")
-            st.caption(f"📅 YTD Period: {ytd_start_date} to {selected_end}")
+            st.caption(f"YTD Period: {ytd_start_date} to {selected_end}")
         with col2:
             st.button("📥 Download Data", use_container_width=True, key="idx_download_btn")
 
@@ -1045,7 +1045,7 @@ def render_equity_page():
         col1, col2 = st.columns([3, 1])
         with col1:
             st.subheader(f"Date Range: {selected_start} to {selected_end}")
-            st.caption(f"📅 YTD Period: {ytd_start_date} to {selected_end}")
+            st.caption(f"YTD Period: {ytd_start_date} to {selected_end}")
         with col2:
             st.button("📥 Download Data", use_container_width=True, key="eq_download_btn")
 
@@ -2062,6 +2062,7 @@ elif st.session_state.page == "Rates/Bonds":
     render_rates_bonds_page()
 elif st.session_state.page == "Commodities":
     render_commodities_page()
+
 
 
 
